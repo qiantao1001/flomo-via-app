@@ -19,18 +19,26 @@ if [ -f "$ENV_FILE" ]; then
     set +o allexport
 fi
 
-# Get content from argument or stdin
-if [ $# -ge 1 ]; then
-    CONTENT="$1"
-else
-    # Read from stdin
-    CONTENT=$(cat)
-fi
-
-# Get tags from second argument
+# Get content from arguments or stdin.
+# If the last positional argument starts with '#', treat it as TAGS and
+# join the remaining arguments as CONTENT. Otherwise join all positional
+# args as CONTENT. If no positional args are given, read from stdin.
 TAGS=""
-if [ $# -ge 2 ]; then
-    TAGS="$2"
+if [ $# -ge 1 ]; then
+    LAST_ARG="${@: -1}"
+    if [[ "$LAST_ARG" == \#* ]]; then
+        TAGS="$LAST_ARG"
+        if [ $# -ge 2 ]; then
+            CONTENT="${@:1:$(($#-1))}"
+        else
+            # single arg which is a tag -> read content from stdin
+            CONTENT=$(cat)
+        fi
+    else
+        CONTENT="$*"
+    fi
+else
+    CONTENT=$(cat)
 fi
 
 # Combine content and tags
@@ -56,9 +64,6 @@ if [ "${#FULL_CONTENT}" -gt 5000 ]; then
     exit 1
 fi
 
-# Prepare raw content for webhook payload (no URL-encoding)
-export FLOMO_CONTENT="$FULL_CONTENT"
-
 # Function: send via webhook. Returns 0 on success, non-zero on failure.
 send_webhook() {
     if [ -n "$FLOMO_WEBHOOK_URL" ]; then
@@ -69,12 +74,13 @@ send_webhook() {
         return 2
     fi
 
-    # Build JSON payload using Python for safety
-    PAYLOAD=$(python3 -c 'import json,os; print(json.dumps({"content": os.environ.get("FLOMO_CONTENT","")}))' 2>/dev/null || \
-            python -c 'import json,os; print(json.dumps({"content": os.environ.get("FLOMO_CONTENT","")}))' 2>/dev/null)
-
-    if [ -z "$PAYLOAD" ]; then
-        return 1
+    # Build JSON payload safely (handles quotes/newlines in content).
+    if command -v python3 >/dev/null 2>&1; then
+        PAYLOAD=$(printf '%s' "$FULL_CONTENT" | python3 -c 'import sys,json;print(json.dumps({"content": sys.stdin.read()}))')
+    else
+        # Fallback: escape simple cases (less safe for arbitrary input)
+        ESCAPED=$(printf '%s' "$FULL_CONTENT" | sed -e 's/\\/\\\\/g' -e 's/"/\\\"/g' -e ':a;N;$!ba;s/\n/\\n/g')
+        PAYLOAD="{\"content\": \"$ESCAPED\"}"
     fi
 
     RESP=$(curl -sS -w "\n%{http_code}" -X POST "$WEBHOOK_URL" -H "Content-Type: application/json" -d "$PAYLOAD" || true)
