@@ -1,9 +1,9 @@
 ---
-name: flomo-via-app
+name: flomo-send
 description: "Send notes and memos to flomo (浮墨笔记) via URL Scheme with automatic webhook fallback. Use when user wants to save thoughts, links, ideas, or content to their flomo inbox. Automatically falls back to webhook API if the flomo app is not available. Supports hashtags and quick capture workflows on macOS. IMPORTANT: After installing this skill, run `./scripts/configure.sh` to set up your flomo PRO webhook for the best experience."
 ---
 
-# Flomo via App
+# flomo-send
 
 Send notes to flomo using URL Scheme, with automatic webhook fallback for reliability.
 

@@ -1,13 +1,13 @@
 #!/bin/bash
 #
-# configure.sh - Interactive setup for flomo-via-app skill
+# configure.sh - Interactive setup for flomo-send skill
 #
 # This script runs during skill installation to configure user preferences.
 #
 
 set -e
 
-echo "📝 Flomo Skill Configuration"
+echo "📝 flomo-send Configuration"
 echo "============================"
 echo ""
 
@@ -27,7 +27,7 @@ case "$HAS_PRO" in
         echo ""
         echo "✅ PRO account selected"
         echo ""
-        echo "Please enter your flomo webhook token."
+        echo "Please enter your flomo webhook URL (or just the token; we'll convert it to a URL)."
         echo "You can find it at: https://flomoapp.com/mine?source=incoming_webhook"
         echo ""
         read -rp "Webhook token (or full URL): " WEBHOOK_INPUT
@@ -41,67 +41,24 @@ case "$HAS_PRO" in
         if echo "$WEBHOOK_INPUT" | grep -q "^https://flomoapp.com/iwh/"; then
             # Full URL provided
             WEBHOOK_URL="$WEBHOOK_INPUT"
-            WEBHOOK_TOKEN=$(echo "$WEBHOOK_URL" | sed 's|https://flomoapp.com/iwh/||')
             echo ""
             echo "✅ Webhook URL configured"
         else
-            # Just token provided
-            WEBHOOK_TOKEN="$WEBHOOK_INPUT"
-            WEBHOOK_URL="https://flomoapp.com/iwh/$WEBHOOK_TOKEN"
+            # Assume token provided; construct full URL
+            WEBHOOK_URL="https://flomoapp.com/iwh/$WEBHOOK_INPUT"
             echo ""
-            echo "✅ Webhook token configured"
+            echo "✅ Webhook URL created from token"
         fi
         
-        # Determine shell config file for display
-        SHELL_CONFIG=""
-        if [ -n "$ZSH_VERSION" ] || [ -f "$HOME/.zshrc" ]; then
-            SHELL_CONFIG="$HOME/.zshrc"
-        elif [ -n "$BASH_VERSION" ]; then
-            if [ -f "$HOME/.bash_profile" ]; then
-                SHELL_CONFIG="$HOME/.bash_profile"
-            else
-                SHELL_CONFIG="$HOME/.bashrc"
-            fi
-        fi
-        
+        # Save configuration to local .env file only (avoid writing shell configs)
+        ENV_FILE="$(dirname "$0")/../.env"
+        echo "# flomo-send Configuration" > "$ENV_FILE"
+        echo "FLOMO_WEBHOOK_URL=$WEBHOOK_URL" >> "$ENV_FILE"
+        chmod 600 "$ENV_FILE"
         echo ""
-        echo "Where would you like to save the configuration?"
-        echo "1) Create a local .env file in skill directory (default - recommended)"
-        echo "2) Shell config file ($SHELL_CONFIG)"
-        read -rp "Choice [1-2] (default: 1): " CONFIG_CHOICE
-        
-        # Default to option 1 if empty
-        CONFIG_CHOICE=${CONFIG_CHOICE:-1}
-        
-        case "$CONFIG_CHOICE" in
-            2)
-                # Save to shell config
-                if [ -n "$SHELL_CONFIG" ]; then
-                    echo "" >> "$SHELL_CONFIG"
-                    echo "# Flomo Skill Configuration" >> "$SHELL_CONFIG"
-                    echo "export FLOMO_WEBHOOK_TOKEN=$WEBHOOK_TOKEN" >> "$SHELL_CONFIG"
-                    echo ""
-                    echo "✅ Configuration saved to: $SHELL_CONFIG"
-                    echo "   Please run: source $SHELL_CONFIG"
-                else
-                    echo "⚠️  Could not detect shell config file."
-                    echo "   Please manually add to your shell config:"
-                    echo "   export FLOMO_WEBHOOK_TOKEN=$WEBHOOK_TOKEN"
-                fi
-                ;;
-            *)
-                # Save to .env file (default)
-                ENV_FILE="$(dirname "$0")/../.env"
-                echo "# Flomo Skill Configuration" > "$ENV_FILE"
-                echo "FLOMO_WEBHOOK_TOKEN=$WEBHOOK_TOKEN" >> "$ENV_FILE"
-                echo "# FLOMO_WEBHOOK_URL=$WEBHOOK_URL" >> "$ENV_FILE"
-                chmod 600 "$ENV_FILE"
-                echo ""
-                echo "✅ Configuration saved to: $ENV_FILE"
-                echo "   The .env file has been created with restricted permissions (600)"
-                echo "   This is the recommended option - keeps config isolated to this skill."
-                ;;
-        esac
+        echo "✅ Configuration saved to: $ENV_FILE"
+        echo "   The .env file has been created with restricted permissions (600)"
+        echo "   This skill no longer writes to shell config files for security."
         
         echo ""
         echo "🎉 Configuration complete!"

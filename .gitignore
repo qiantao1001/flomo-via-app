@@ -1,5 +1,6 @@
 # Ignore local environment file
 .env
+.clawhub
 
 # macOS
 .DS_Store

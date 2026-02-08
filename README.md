@@ -1,4 +1,4 @@
-# Flomo via App
+# flomo-send
 
 通过 Webhook API 发送笔记到 flomo（浮墨笔记）的 OpenClaw Skill。
 
@@ -17,7 +17,7 @@
 
 ```bash
 # 进入 skill 目录
-cd skills/flomo-via-app
+cd skills/flomo-send
 
 # 运行交互式配置
 ./scripts/configure.sh
@@ -25,8 +25,8 @@ cd skills/flomo-via-app
 
 配置脚本会询问：
 1. 是否有 flomo PRO 账户
-2. Webhook token（支持完整 URL 或仅 token）
-3. 配置保存位置（shell 配置文件 或 本地 .env）
+2. Webhook URL（或只提供 token，脚本会自动构造成完整 URL）
+3. 配置保存位置（默认保存到本地 `.env` 文件，仅此方式以避免修改 shell 配置）
 
 ## 使用方法
 
@@ -62,16 +62,15 @@ URL Scheme 直接调用已在本版本移除，因为 macOS 上的 flomo 应用�
 
 | 变量 | 说明 |
 |------|------|
-| `FLOMO_WEBHOOK_TOKEN` | Webhook token |
-| `FLOMO_WEBHOOK_URL` | 完整的 Webhook URL |
+| `FLOMO_WEBHOOK_URL` | 完整的 Webhook URL（格式：`https://flomoapp.com/iwh/<your-token>`） |
 
 ### 手动配置
 
 ```bash
-export FLOMO_WEBHOOK_TOKEN="your-token-here"
+export FLOMO_WEBHOOK_URL="https://flomoapp.com/iwh/your-token-here"
 ```
 
-添加到 `~/.zshrc` 或 `~/.bash_profile` 使其持久化。
+建议将该变量写入本地 `.env`（skill 目录）以持久化，或在当前终端临时导出以测试。
 
 ## 限制
 
@@ -79,15 +78,45 @@ export FLOMO_WEBHOOK_TOKEN="your-token-here"
 - 图片最多 **9 张**（仅 URL Scheme）
 - Webhook 不支持图片
 
-## 获取 Webhook Token
+## 获取 Webhook URL
 
 1. 访问 [flomo 设置页面](https://flomoapp.com/mine?source=incoming_webhook)
-2. 复制你的专属 Webhook URL
+2. 复制你的专属 Webhook URL（示例格式：`https://flomoapp.com/iwh/xxxxxxxxxxxxxxxx`）
+
+## 示例
+
+**.env 示例（请勿提交到版本控制）**
+
+```bash
+# .env（示例）
+FLOMO_WEBHOOK_URL="https://flomoapp.com/iwh/xxxxxxxxxxxxxxxx"
+```
+
+**快速示例**
+
+```bash
+# 运行交互式配置（将在 skill 目录生成 .env）
+./scripts/configure.sh
+
+# 发送简单笔记
+./scripts/flomo_send.sh "我的快速想法"
+
+# 带标签
+./scripts/flomo_send.sh "读书笔记" "#读书 #认知"
+
+# 从剪贴板发送
+./scripts/flomo_send.sh "$(pbpaste)" "#待读"
+
+# 从管道发送
+echo "来自管道的笔记" | ./scripts/flomo_send.sh
+```
+
+注意：`.env` 文件包含敏感信息（Webhook URL），请保持私密并在 `.gitignore` 中排除它。
 
 ## 项目结构
 
 ```
-flomo-via-app/
+flomo-send/
 ├── SKILL.md              # Skill 定义（AI 使用）
 ├── README.md             # 本文件
 ├── scripts/
