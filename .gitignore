@@ -1,0 +1,20 @@
+# Ignore local environment file
+.env
+
+# macOS
+.DS_Store
+
+# Editor temp files
+*.swp
+*.swo
+*.swx
+
+# Node/npm
+node_modules/
+
+# Python
+__pycache__/
+*.pyc
+
+# Logs
+*.log
